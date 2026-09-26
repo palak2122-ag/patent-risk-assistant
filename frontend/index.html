@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patent Risk &amp; Similarity Assistant</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      background: #f3f4f6;
+      color: #1f2328;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 3px solid #3b82f6;
+    }
+
+    header svg { flex-shrink: 0; }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    main {
+      max-width: 860px;
+      margin: 36px auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ── Input card ───────────────────────────────────────────── */
+    .card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 28px 28px 24px;
+      margin-bottom: 28px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1f2328;
+    }
+
+    .card p.hint {
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-bottom: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 12px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      resize: vertical;
+      color: #1f2328;
+      background: #fafafa;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    textarea:focus { border-color: #3b82f6; background: #fff; }
+
+    .input-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .input-error {
+      font-size: 0.82rem;
+      color: #dc2626;
+      min-height: 18px;
+    }
+
+    /* ── Button ───────────────────────────────────────────────── */
+    button#analyzeBtn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 10px 22px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    button#analyzeBtn:hover:not(:disabled) { background: #2563eb; }
+    button#analyzeBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── Spinner ──────────────────────────────────────────────── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── API error banner ─────────────────────────────────────── */
+    #apiError {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 14px 18px;
+      color: #b91c1c;
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+
+    /* ── Results section ──────────────────────────────────────── */
+    #results { display: none; }
+
+    /* ── Summary box ──────────────────────────────────────────── */
+    .summary-box {
+      border-left: 4px solid #3b82f6;
+      background: #eff6ff;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin-bottom: 28px;
+      font-size: 0.9rem;
+      color: #1e3a5f;
+      line-height: 1.65;
+    }
+
+    /* ── Concepts pills ───────────────────────────────────────── */
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+
+    .concepts-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 28px;
+    }
+
+    .pill {
+      background: #e0e7ff;
+      color: #3730a3;
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    /* ── Patent cards ─────────────────────────────────────────── */
+    .patents-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .patent-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px 20px;
+      border-left: 5px solid #e5e7eb; /* overridden by risk colour */
+    }
+
+    .patent-card.risk-high   { border-left-color: #ef4444; }
+    .patent-card.risk-medium { border-left-color: #f59e0b; }
+    .patent-card.risk-low    { border-left-color: #22c55e; }
+
+    .patent-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .patent-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #1f2328;
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 3px 11px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-high   { background: #fef2f2; color: #dc2626; }
+    .badge-medium { background: #fffbeb; color: #b45309; }
+    .badge-low    { background: #f0fdf4; color: #16a34a; }
+
+    .badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .badge-high   .badge-dot { background: #dc2626; }
+    .badge-medium .badge-dot { background: #f59e0b; }
+    .badge-low    .badge-dot { background: #22c55e; }
+
+    .patent-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .patent-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .score-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .score-label { font-size: 0.75rem; color: #6b7280; white-space: nowrap; }
+
+    .score-bar {
+      flex: 1;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    .risk-high   .score-fill { background: #ef4444; }
+    .risk-medium .score-fill { background: #f59e0b; }
+    .risk-low    .score-fill { background: #22c55e; }
+
+    .score-value { font-size: 0.78rem; font-weight: 600; color: #374151; white-space: nowrap; }
+
+    .patent-abstract {
+      font-size: 0.83rem;
+      color: #4b5563;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .patent-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .patent-link:hover { text-decoration: underline; }
+
+    /* ── Skeleton loader ──────────────────────────────────────── */
+    #skeleton { display: none; flex-direction: column; gap: 14px; }
+
+    .skel-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px 20px;
+      border-left: 5px solid #e5e7eb;
+    }
+
+    .skel-line {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      border-radius: 4px;
+      animation: shimmer 1.4s infinite;
+    }
+
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 540px) {
+      main { margin-top: 20px; }
+      .card { padding: 18px 16px; }
+      .patent-card { padding: 14px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────── -->
+<header>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+  <div>
+    <h1>Patent Risk &amp; Similarity Assistant</h1>
+    <p>Analyze your invention description against existing patents</p>
+  </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Input card -->
+  <div class="card">
+    <h2>Describe your invention or project</h2>
+    <p class="hint">Paste your code, README, or a plain-English description below. The more detail you provide, the more accurate the results.</p>
+
+    <textarea
+      id="inputText"
+      placeholder="Example: A system that detects objects in real time using convolutional neural networks on embedded edge devices with low latency and minimal power consumption."
+      spellcheck="false"
+    ></textarea>
+
+    <div class="input-footer">
+      <span class="input-error" id="inputError"></span>
+      <button id="analyzeBtn" type="button">
+        <div class="spinner" id="spinner"></div>
+        <svg id="btnIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Analyze Patent Risk
+      </button>
+    </div>
+  </div>
+
+  <!-- API error banner -->
+  <div id="apiError"></div>
+
+  <!-- Skeleton loader (shown while waiting) -->
+  <div id="skeleton">
+    <div class="section-label">Loading results…</div>
+    <div class="skel-card"><div class="skel-line" style="height:14px;width:60%;margin-bottom:10px"></div><div class="skel-line" style="height:10px;width:90%"></div></div>
+    <div class="skel-card"><div class="skel-line" style="height:14px;width:50%;margin-bottom:10px"></div><div class="skel-line" style="height:10px;width:85%"></div></div>
+    <div class="skel-card"><div class="skel-line" style="height:14px;width:70%;margin-bottom:10px"></div><div class="skel-line" style="height:10px;width:75%"></div></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Risk summary -->
+    <div class="summary-box" id="summaryBox"></div>
+
+    <!-- Extracted concepts -->
+    <div class="section-label">Extracted Concepts</div>
+    <div class="concepts-wrap" id="conceptsWrap"></div>
+
+    <!-- Similar patents -->
+    <div class="section-label">Similar Patents</div>
+    <div class="patents-grid" id="patentsGrid"></div>
+
+  </div>
+
+</main>
+
+<script>
+  // ── DOM refs ────────────────────────────────────────────────
+  const inputText  = document.getElementById('inputText');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const spinner    = document.getElementById('spinner');
+  const btnIcon    = document.getElementById('btnIcon');
+  const inputError = document.getElementById('inputError');
+  const apiError   = document.getElementById('apiError');
+  const skeleton   = document.getElementById('skeleton');
+  const results    = document.getElementById('results');
+  const summaryBox = document.getElementById('summaryBox');
+  const conceptsWrap = document.getElementById('conceptsWrap');
+  const patentsGrid  = document.getElementById('patentsGrid');
+
+  // ── State helpers ────────────────────────────────────────────
+  function setLoading(on) {
+    analyzeBtn.disabled = on;
+    spinner.style.display = on ? 'block' : 'none';
+    btnIcon.style.display = on ? 'none' : 'block';
+    skeleton.style.display = on ? 'flex' : 'none';
+    if (on) {
+      results.style.display = 'none';
+      apiError.style.display = 'none';
+      inputError.textContent = '';
+    }
+  }
+
+  function showError(msg) {
+    apiError.textContent = '⚠ ' + msg;
+    apiError.style.display = 'block';
+    skeleton.style.display = 'none';
+  }
+
+  // ── Risk helpers ─────────────────────────────────────────────
+  function riskClass(level) {
+    return { High: 'risk-high', Medium: 'risk-medium', Low: 'risk-low' }[level] || 'risk-low';
+  }
+
+  function badgeClass(level) {
+    return { High: 'badge-high', Medium: 'badge-medium', Low: 'badge-low' }[level] || 'badge-low';
+  }
+
+  function riskEmoji(level) {
+    return { High: '🔴', Medium: '🟡', Low: '🟢' }[level] || '⚪';
+  }
+
+  // ── Render results ───────────────────────────────────────────
+  function renderResults(data) {
+    // Summary
+    summaryBox.textContent = data.summary;
+
+    // Concepts
+    conceptsWrap.innerHTML = '';
+    (data.extracted_concepts || []).forEach(c => {
+      const pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = c;
+      conceptsWrap.appendChild(pill);
+    });
+
+    // Patents
+    patentsGrid.innerHTML = '';
+    (data.matches || []).forEach(m => {
+      const scorePercent = Math.min(100, Math.round(m.similarity_score * 100));
+
+      const card = document.createElement('div');
+      card.className = `patent-card ${riskClass(m.risk_level)}`;
+      card.innerHTML = `
+        <div class="patent-header">
+          <div class="patent-title">${escHtml(m.title)}</div>
+          <span class="badge ${badgeClass(m.risk_level)}">
+            <span class="badge-dot"></span>
+            ${escHtml(m.risk_level)} Risk
+          </span>
+        </div>
+        <div class="patent-meta">
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            ${escHtml(m.patent_id)}
+          </span>
+        </div>
+        <div class="score-bar-wrap">
+          <span class="score-label">Similarity</span>
+          <div class="score-bar ${riskClass(m.risk_level)}">
+            <div class="score-fill" style="width:${scorePercent}%"></div>
+          </div>
+          <span class="score-value">${m.similarity_score.toFixed(3)}</span>
+        </div>
+        <div class="patent-abstract">${escHtml(m.abstract)}</div>
+        <a class="patent-link" href="${escHtml(m.url)}" target="_blank" rel="noopener noreferrer">
+          View full patent ↗
+        </a>
+      `;
+      patentsGrid.appendChild(card);
+    });
+
+    results.style.display = 'block';
+  }
+
+  // ── XSS guard ────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Main handler ─────────────────────────────────────────────
+  analyzeBtn.addEventListener('click', async () => {
+    const text = inputText.value.trim();
+
+    // Client-side validation
+    if (!text) {
+      inputError.textContent = 'Please enter a description before analyzing.';
+      inputText.focus();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: text }),
+      });
+
+      if (!response.ok) {
+        // Try to read the FastAPI error detail
+        let detail = `Server error (${response.status})`;
+        try {
+          const err = await response.json();
+          if (err.detail) detail = err.detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+
+      const data = await response.json();
+      setLoading(false);
+      renderResults(data);
+
+    } catch (err) {
+      setLoading(false);
+      if (err.message === 'Failed to fetch') {
+        showError('Could not reach the API. Make sure the backend is running on http://127.0.0.1:8000');
+      } else {
+        showError(err.message);
+      }
+    }
+  });
+
+  // Allow Ctrl+Enter to submit
+  inputText.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) analyzeBtn.click();
+  });
+
+  // Clear inline error as user types
+  inputText.addEventListener('input', () => { inputError.textContent = ''; });
+</script>
+
+</body>
+</html>

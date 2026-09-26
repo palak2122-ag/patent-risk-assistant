@@ -10,6 +10,9 @@ pydantic==2.11.10
 # TF-IDF vectorization + cosine similarity (concept → patent matching)
 scikit-learn==1.6.1
 
+# Required by FastAPI StaticFiles to serve the frontend folder
+aiofiles==24.1.0
+
 # --- Coming in later steps ---
 # openai              # optional: LLM-powered concept extraction
 # requests            # Step: USPTO / SerpAPI patent search

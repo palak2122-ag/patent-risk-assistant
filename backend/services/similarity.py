@@ -88,8 +88,10 @@ def find_similar_patents(
     # the same vocabulary, then split the vectors back apart
     all_docs = patent_docs + [query]
     vectorizer = TfidfVectorizer(
-        ngram_range=(1, 2),   # unigrams + bigrams, same as extractor
-        stop_words="english", # sklearn has a built-in stopword list
+        ngram_range=(1, 2),  # unigrams + bigrams, same as extractor
+        # No stop_words here — the extractor already filtered stopwords.
+        # Letting sklearn re-filter silently drops tokens like "system" or
+        # "real" that the extractor kept, which zeros out the query vector.
         min_df=1,
     )
     tfidf_matrix = vectorizer.fit_transform(all_docs)

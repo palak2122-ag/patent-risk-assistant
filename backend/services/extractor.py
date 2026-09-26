@@ -71,14 +71,22 @@ def extract_concepts(text: str, top_n: int = 8) -> List[str]:
     counter = Counter(unigrams + bigrams)
     top_terms = [term for term, _ in counter.most_common(top_n * 2)]
 
-    # Step 6 — prefer bigrams (more specific) over single words;
-    # deduplicate: skip a unigram if it already appears inside a chosen bigram
+    # Step 6 — prefer bigrams over bare unigrams.
+    # Rule: skip a unigram if a bigram that contains it is already chosen.
+    # Use an exact-membership set — never substring matching, which wrongly
+    # blocks e.g. "real time" because "real" was already added.
     chosen: List[str] = []
-    chosen_text = ""
+    chosen_words: set = set()   # individual words covered by chosen bigrams
     for term in top_terms:
-        if term not in chosen_text:
+        parts = term.split()
+        if len(parts) == 2:
+            # Always accept bigrams; mark their words as covered
             chosen.append(term)
-            chosen_text += " " + term
+            chosen_words.update(parts)
+        else:
+            # Accept a unigram only if it isn't already covered by a bigram
+            if term not in chosen_words:
+                chosen.append(term)
         if len(chosen) >= top_n:
             break
 

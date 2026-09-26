@@ -1,9 +1,12 @@
 # backend/main.py
 # Entry point for the Patent Risk & Similarity Assistant API.
-# Uses FastAPI to expose a single POST /analyze endpoint.
+# Serves the frontend UI and exposes a POST /analyze endpoint.
 
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
 
@@ -20,13 +23,21 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# Allow requests from the frontend (any origin is fine for local dev / hackathon)
+# Allow requests from any origin (required for local dev / hackathon)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Static frontend ──────────────────────────────────────────────────────────
+# Resolve the frontend/ directory relative to this file so the app works
+# regardless of where uvicorn is launched from.
+_FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+
+# Mount static assets (CSS, JS, images if any are added later)
+app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
 
 # ---------------------------------------------------------------------------
 # Request / Response models
@@ -106,7 +117,14 @@ def _build_summary(matches: List[PatentMatch]) -> str:
 
 @app.get("/")
 def root():
-    """Health-check endpoint — confirms the API is running."""
+    """Serve the frontend UI from the root URL."""
+    index_path = os.path.join(_FRONTEND_DIR, "index.html")
+    return FileResponse(index_path, media_type="text/html")
+
+
+@app.get("/health")
+def health():
+    """JSON health-check — useful for testing the API is alive."""
     return {"status": "ok", "message": "Patent Risk & Similarity Assistant is running."}
 
 
