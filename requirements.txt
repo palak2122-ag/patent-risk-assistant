@@ -1,0 +1,14 @@
+# Core API framework
+fastapi==0.115.14
+
+# ASGI server — runs the FastAPI app locally
+uvicorn[standard]==0.34.3
+
+# Data validation — 2.9+ ships prebuilt cp313-win_amd64 wheels (no MSVC needed)
+pydantic==2.11.10
+
+# --- Coming in later steps ---
+# openai              # Step 2: LLM concept extraction
+# sentence-transformers  # Step 4: semantic similarity scoring
+# requests            # Step 3: USPTO / SerpAPI patent search
+# python-dotenv       # Step 2: load API keys from .env
