@@ -1,0 +1,62 @@
+[
+  {
+    "patent_id": "US10382765",
+    "title": "Real-Time Object Detection System Using Convolutional Neural Networks on Edge Devices",
+    "abstract": "A system and method for performing real-time object detection on edge devices using optimized convolutional neural networks. The system applies quantization and pruning techniques to reduce model size and inference latency while maintaining accuracy. Designed for deployment on resource-constrained hardware such as embedded processors and mobile GPUs.",
+    "url": "https://patents.google.com/patent/US10382765"
+  },
+  {
+    "patent_id": "US9876210",
+    "title": "Distributed Blockchain Ledger for Secure Financial Transactions",
+    "abstract": "A distributed ledger system using blockchain technology to record and verify financial transactions without a central authority. Implements consensus mechanisms, cryptographic hashing, and smart contracts to ensure transaction integrity and prevent double-spending. Supports multiple asset types and cross-chain interoperability.",
+    "url": "https://patents.google.com/patent/US9876210"
+  },
+  {
+    "patent_id": "US10741093",
+    "title": "Natural Language Processing System for Automated Customer Support",
+    "abstract": "An automated customer support system that uses natural language processing and transformer-based language models to understand user queries and generate helpful responses. The system integrates intent classification, entity extraction, and dialogue management to resolve support tickets without human intervention.",
+    "url": "https://patents.google.com/patent/US10741093"
+  },
+  {
+    "patent_id": "US11023456",
+    "title": "Augmented Reality Navigation System for Indoor Environments",
+    "abstract": "A navigation system that overlays directional guidance onto a live camera feed using augmented reality techniques. Uses simultaneous localization and mapping (SLAM) combined with floor plan data to guide users through complex indoor spaces such as hospitals, airports, and shopping centers.",
+    "url": "https://patents.google.com/patent/US11023456"
+  },
+  {
+    "patent_id": "US10654321",
+    "title": "Federated Machine Learning for Privacy-Preserving Model Training",
+    "abstract": "A federated learning framework that trains machine learning models across multiple decentralized devices without sharing raw data. Local model updates are aggregated using secure aggregation protocols to produce a global model, preserving user privacy while enabling collaborative learning.",
+    "url": "https://patents.google.com/patent/US10654321"
+  },
+  {
+    "patent_id": "US10987654",
+    "title": "Recommendation Engine Using Collaborative Filtering and Deep Learning",
+    "abstract": "A content recommendation system that combines collaborative filtering with deep neural networks to predict user preferences. The system builds user and item embeddings from interaction history and uses attention mechanisms to personalize recommendations in real time for e-commerce and streaming platforms.",
+    "url": "https://patents.google.com/patent/US10987654"
+  },
+  {
+    "patent_id": "US11234567",
+    "title": "Autonomous Vehicle Path Planning with Reinforcement Learning",
+    "abstract": "A path planning module for autonomous vehicles that uses deep reinforcement learning to navigate dynamic environments. The agent learns optimal driving policies by interacting with a simulation environment, incorporating sensor fusion from lidar, radar, and camera inputs to make safe real-time decisions.",
+    "url": "https://patents.google.com/patent/US11234567"
+  },
+  {
+    "patent_id": "US10543219",
+    "title": "Cloud-Based Continuous Integration and Deployment Pipeline Automation",
+    "abstract": "A cloud-native platform for automating software build, test, and deployment pipelines. The system orchestrates containerized workloads using a scheduler, monitors pipeline health, and supports rollback and canary deployment strategies to reduce downtime in production software releases.",
+    "url": "https://patents.google.com/patent/US10543219"
+  },
+  {
+    "patent_id": "US11102938",
+    "title": "Voice Recognition System with Speaker Identification and Noise Cancellation",
+    "abstract": "A voice recognition system capable of identifying individual speakers and transcribing speech in noisy environments. The system uses deep neural network acoustic models combined with noise cancellation algorithms and speaker embedding vectors to deliver accurate transcription across multiple speakers.",
+    "url": "https://patents.google.com/patent/US11102938"
+  },
+  {
+    "patent_id": "US10812345",
+    "title": "Cybersecurity Threat Detection Using Anomaly Detection in Network Traffic",
+    "abstract": "A network security system that monitors traffic patterns and uses machine learning anomaly detection to identify potential cybersecurity threats in real time. The system builds a baseline of normal behavior and raises alerts when statistical deviations indicate intrusion attempts, malware activity, or data exfiltration.",
+    "url": "https://patents.google.com/patent/US10812345"
+  }
+]

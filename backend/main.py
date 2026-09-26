@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 
+from backend.services.extractor import extract_concepts
+from backend.services.similarity import find_similar_patents
+
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
@@ -14,7 +17,7 @@ from typing import List
 app = FastAPI(
     title="Patent Risk & Similarity Assistant",
     description="Analyzes code or project descriptions and identifies potentially similar existing patents.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 # Allow requests from the frontend (any origin is fine for local dev / hackathon)
@@ -55,57 +58,46 @@ class AnalyzeResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def mock_analyze(user_input: str) -> AnalyzeResponse:
+def _build_summary(matches: List[PatentMatch]) -> str:
     """
-    Returns hard-coded mock data so the endpoint is immediately testable.
-    Steps 2–5 will replace this with real LLM + patent search + scoring logic.
+    Generate a plain-English one-paragraph risk summary based on the
+    top match and the overall spread of risk levels found.
     """
-    # Pretend the LLM extracted these concepts from the input
-    concepts = [
-        "real-time object detection",
-        "edge inference pipeline",
-        "convolutional neural network optimization",
-    ]
+    if not matches:
+        return "No similar patents were found in the dataset."
 
-    # Pretend these patents were found and scored by the search + similarity service
-    matches = [
-        PatentMatch(
-            patent_id="US10,123,456",
-            title="System and Method for Real-Time Edge Object Detection",
-            abstract="A system that performs convolutional neural network inference on edge devices with reduced latency using quantization techniques.",
-            similarity_score=0.87,
-            risk_level="High",
-            url="https://patents.google.com/patent/US10123456",
-        ),
-        PatentMatch(
-            patent_id="US9,876,543",
-            title="Optimized CNN Pipeline for Embedded Vision Systems",
-            abstract="Methods for compressing and deploying deep learning models on resource-constrained hardware for real-time visual processing.",
-            similarity_score=0.61,
-            risk_level="Medium",
-            url="https://patents.google.com/patent/US9876543",
-        ),
-        PatentMatch(
-            patent_id="US8,765,432",
-            title="Low-Power Neural Network Accelerator Architecture",
-            abstract="Hardware architecture for accelerating neural network computations with emphasis on power efficiency.",
-            similarity_score=0.42,
-            risk_level="Low",
-            url="https://patents.google.com/patent/US8765432",
-        ),
-    ]
+    top = matches[0]
+    high_count   = sum(1 for m in matches if m.risk_level == "High")
+    medium_count = sum(1 for m in matches if m.risk_level == "Medium")
+    low_count    = sum(1 for m in matches if m.risk_level == "Low")
 
+    # Describe the top match
     summary = (
-        "Your input closely matches 1 high-risk patent (US10,123,456) related to "
-        "real-time edge inference. Consider reviewing its claims before proceeding. "
-        "1 medium-risk and 1 low-risk overlap were also found."
+        f"The closest match is \"{top.title}\" ({top.patent_id}) "
+        f"with a similarity score of {top.similarity_score:.2f} — "
+        f"risk level: {top.risk_level}. "
     )
 
-    return AnalyzeResponse(
-        extracted_concepts=concepts,
-        matches=matches,
-        summary=summary,
-    )
+    # Describe the overall risk spread
+    parts = []
+    if high_count:
+        parts.append(f"{high_count} High-risk")
+    if medium_count:
+        parts.append(f"{medium_count} Medium-risk")
+    if low_count:
+        parts.append(f"{low_count} Low-risk")
+
+    summary += f"Across all results: {', '.join(parts)} overlap(s) found. "
+
+    # Add actionable advice based on the top risk level
+    if top.risk_level == "High":
+        summary += "Consider reviewing the claims of the high-risk patent(s) with a legal advisor before proceeding."
+    elif top.risk_level == "Medium":
+        summary += "Some terminology overlaps exist; review the abstracts and consider differentiating your approach."
+    else:
+        summary += "Low overlap detected — your project appears to use sufficiently distinct technology."
+
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +113,10 @@ def root():
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(request: AnalyzeRequest):
     """
-    Accepts a code snippet, README, or description and returns a list of
-    potentially similar patents with similarity scores and a risk summary.
+    Accepts a code snippet, README, or description and returns:
+    - extracted_concepts : key technical terms found in the input
+    - matches            : top similar patents ranked by TF-IDF cosine similarity
+    - summary            : plain-English risk assessment
     """
     # Basic validation — reject empty or whitespace-only input
     if not request.input or not request.input.strip():
@@ -131,7 +125,20 @@ def analyze(request: AnalyzeRequest):
             detail="Input must not be empty. Please provide code or a project description.",
         )
 
-    # TODO (Step 2): replace mock_analyze with real concept extractor
-    # TODO (Step 3): replace mock patents with real USPTO API results
-    # TODO (Step 4): replace hardcoded scores with sentence-transformer similarity
-    return mock_analyze(request.input)
+    # Step 1: extract meaningful technical concepts from the user's text
+    concepts = extract_concepts(request.input)
+
+    # Step 2: find the most similar patents using TF-IDF cosine similarity
+    raw_matches = find_similar_patents(concepts, top_n=5)
+
+    # Step 3: convert raw dicts into validated Pydantic models
+    matches = [PatentMatch(**m) for m in raw_matches]
+
+    # Step 4: build a human-readable summary
+    summary = _build_summary(matches)
+
+    return AnalyzeResponse(
+        extracted_concepts=concepts,
+        matches=matches,
+        summary=summary,
+    )
