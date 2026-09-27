@@ -63,3 +63,6 @@ coverage.xml
 # Windows
 Thumbs.db
 desktop.ini
+
+server_err.log
+server_out.log

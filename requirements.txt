@@ -13,7 +13,8 @@ scikit-learn==1.6.1
 # Required by FastAPI StaticFiles to serve the frontend folder
 aiofiles==24.1.0
 
-# --- Coming in later steps ---
-# openai              # optional: LLM-powered concept extraction
-# requests            # Step: USPTO / SerpAPI patent search
-# python-dotenv       # Step: load API keys from .env
+# HTTP client for PatentsView API calls (patent_retriever.py)
+httpx==0.28.1
+
+# Load PATENTSVIEW_API_KEY from a local .env file (optional convenience)
+python-dotenv==1.2.3

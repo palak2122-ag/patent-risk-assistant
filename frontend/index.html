@@ -181,12 +181,14 @@
     }
 
     .pill {
+      display: inline-block;
       background: #e0e7ff;
       color: #3730a3;
       border-radius: 999px;
       padding: 3px 12px;
       font-size: 0.8rem;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     /* ── Patent cards ─────────────────────────────────────────── */
@@ -312,6 +314,147 @@
 
     .patent-link:hover { text-decoration: underline; }
 
+    /* ── How It Works panel ───────────────────────────────────── */
+    .how-it-works {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 22px 28px 20px;
+      margin-bottom: 28px;
+    }
+
+    .how-it-works summary {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .how-it-works summary::-webkit-details-marker { display: none; }
+
+    .how-it-works summary::before {
+      content: "▶";
+      font-size: 0.65rem;
+      color: #6b7280;
+      transition: transform 0.2s;
+    }
+
+    .how-it-works[open] summary::before { transform: rotate(90deg); }
+
+    .how-it-works-body {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #374151;
+      line-height: 1.7;
+    }
+
+    .how-it-works-body ol {
+      padding-left: 18px;
+      margin: 10px 0 14px;
+    }
+
+    .how-it-works-body ol li { margin-bottom: 6px; }
+
+    .risk-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .risk-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    .rli-high   { background: #fef2f2; color: #dc2626; }
+    .rli-medium { background: #fffbeb; color: #b45309; }
+    .rli-low    { background: #f0fdf4; color: #16a34a; }
+
+    .risk-legend-item .badge-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .rli-high   .badge-dot { background: #dc2626; }
+    .rli-medium .badge-dot { background: #f59e0b; }
+    .rli-low    .badge-dot { background: #22c55e; }
+
+    .how-disclaimer {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      border-top: 1px solid #f3f4f6;
+      padding-top: 10px;
+      margin-top: 14px;
+    }
+
+    /* ── Data-source badge ────────────────────────────────────── */
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 11px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+
+    .source-badge.source-live {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #6ee7b7;
+    }
+
+    .source-badge.source-offline {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .source-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .source-live .source-dot   { background: #10b981; }
+    .source-offline .source-dot { background: #f59e0b; }
+
+    /* ── Offline unavailable notice ───────────────────────────── */
+    .offline-notice {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: #78350f;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .offline-notice strong { color: #92400e; }
+
+    /* ── Legal disclaimer box ─────────────────────────────────── */
+    .legal-disclaimer {
+      background: #f8f9fa;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      color: #6b7280;
+      line-height: 1.55;
+      margin-top: 18px;
+    }
+
     /* ── Skeleton loader ──────────────────────────────────────── */
     #skeleton { display: none; flex-direction: column; gap: 14px; }
 
@@ -383,6 +526,36 @@
     </div>
   </div>
 
+  <!-- How Risk Is Determined -->
+  <details class="how-it-works">
+    <summary>How Risk Is Determined</summary>
+    <div class="how-it-works-body">
+      <p>When you click <strong>Analyze Patent Risk</strong>, the system runs three steps:</p>
+      <ol>
+        <li>
+          <strong>Concept extraction</strong> — your description is lowercased, stripped of punctuation and common English words (stopwords), then the most frequent single words and two-word phrases (bigrams) are extracted as technical concepts. Up to 8 key terms are surfaced and shown as the coloured pills above the results.
+        </li>
+        <li>
+          <strong>Patent retrieval</strong> — when a <code>PATENTSVIEW_API_KEY</code> is configured, the system queries the <strong>PatentsView PatentSearch API</strong> (<a href="https://search.patentsview.org" target="_blank" rel="noopener">search.patentsview.org</a>) using technical terms derived from your description. Up to 25 real patents are retrieved dynamically. Without a key, the API is not contacted and results are unavailable.
+        </li>
+        <li>
+          <strong>Similarity matching</strong> — your <em>full description</em> is compared against the retrieved patents. Both the query and each patent's title + abstract are converted into TF-IDF vectors (term-frequency / inverse-document-frequency) using unigrams and bigrams, and <strong>cosine similarity</strong> is calculated. This measures vocabulary overlap, weighted by how distinctive each word is across the result set.
+        </li>
+        <li>
+          <strong>Risk labelling</strong> — the cosine similarity score (0.0 – 1.0) is mapped to a risk level using fixed thresholds:
+          <div class="risk-legend">
+            <span class="risk-legend-item rli-high"><span class="badge-dot"></span>High — score &ge; 0.20 (meaningful lexical overlap)</span>
+            <span class="risk-legend-item rli-medium"><span class="badge-dot"></span>Medium — score &ge; 0.08 (some shared terminology)</span>
+            <span class="risk-legend-item rli-low"><span class="badge-dot"></span>Low — score &lt; 0.08 (little to no overlap)</span>
+          </div>
+        </li>
+      </ol>
+      <p class="how-disclaimer">
+        When live search is enabled, results come from the PatentsView database of US granted patents. The similarity labels (High / Medium / Low) reflect <strong>vocabulary overlap only</strong> — they are <strong>not</strong> legal infringement conclusions. Always consult a qualified patent attorney before making any legal or commercial decisions.
+      </p>
+    </div>
+  </details>
+
   <!-- API error banner -->
   <div id="apiError"></div>
 
@@ -397,16 +570,30 @@
   <!-- Results -->
   <div id="results">
 
+    <!-- Data source badge -->
+    <div id="sourceBadge"></div>
+
+    <!-- Offline unavailable notice (shown instead of patents when key is missing) -->
+    <div id="offlineNotice" style="display:none"></div>
+
     <!-- Risk summary -->
-    <div class="summary-box" id="summaryBox"></div>
+    <div class="summary-box" id="summaryBox" style="display:none"></div>
 
     <!-- Extracted concepts -->
-    <div class="section-label">Extracted Concepts</div>
+    <div class="section-label" id="conceptsLabel" style="display:none">Extracted Concepts</div>
     <div class="concepts-wrap" id="conceptsWrap"></div>
 
     <!-- Similar patents -->
-    <div class="section-label">Similar Patents</div>
+    <div class="section-label" id="patentsLabel" style="display:none">Similar Patents</div>
     <div class="patents-grid" id="patentsGrid"></div>
+
+    <!-- Legal disclaimer (always shown with results) -->
+    <div class="legal-disclaimer" id="legalDisclaimer" style="display:none">
+      ⚖ <strong>Disclaimer:</strong> These similarity labels reflect vocabulary overlap only and are
+      <strong>not</strong> legal infringement conclusions. This tool does not constitute legal advice
+      and does not replace a formal patent search. Always consult a qualified patent attorney before
+      making legal or commercial decisions.
+    </div>
 
   </div>
 
@@ -414,17 +601,22 @@
 
 <script>
   // ── DOM refs ────────────────────────────────────────────────
-  const inputText  = document.getElementById('inputText');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const spinner    = document.getElementById('spinner');
-  const btnIcon    = document.getElementById('btnIcon');
-  const inputError = document.getElementById('inputError');
-  const apiError   = document.getElementById('apiError');
-  const skeleton   = document.getElementById('skeleton');
-  const results    = document.getElementById('results');
-  const summaryBox = document.getElementById('summaryBox');
-  const conceptsWrap = document.getElementById('conceptsWrap');
-  const patentsGrid  = document.getElementById('patentsGrid');
+  const inputText      = document.getElementById('inputText');
+  const analyzeBtn     = document.getElementById('analyzeBtn');
+  const spinner        = document.getElementById('spinner');
+  const btnIcon        = document.getElementById('btnIcon');
+  const inputError     = document.getElementById('inputError');
+  const apiError       = document.getElementById('apiError');
+  const skeleton       = document.getElementById('skeleton');
+  const results        = document.getElementById('results');
+  const sourceBadge    = document.getElementById('sourceBadge');
+  const offlineNotice  = document.getElementById('offlineNotice');
+  const summaryBox     = document.getElementById('summaryBox');
+  const conceptsLabel  = document.getElementById('conceptsLabel');
+  const conceptsWrap   = document.getElementById('conceptsWrap');
+  const patentsLabel   = document.getElementById('patentsLabel');
+  const patentsGrid    = document.getElementById('patentsGrid');
+  const legalDisclaimer = document.getElementById('legalDisclaimer');
 
   // ── State helpers ────────────────────────────────────────────
   function setLoading(on) {
@@ -460,8 +652,54 @@
 
   // ── Render results ───────────────────────────────────────────
   function renderResults(data) {
+    const isLive    = data.data_source === 'live';
+    const hasMatch  = data.matches && data.matches.length > 0;
+
+    // ── Data source badge ──────────────────────────────────────
+    if (isLive) {
+      sourceBadge.innerHTML =
+        '<span class="source-badge source-live"><span class="source-dot"></span>Live Patent Search — PatentsView</span>';
+    } else {
+      sourceBadge.innerHTML =
+        '<span class="source-badge source-offline"><span class="source-dot"></span>Offline — Live Search Unavailable</span>';
+    }
+
+    // ── Offline notice (no API key / error) ────────────────────
+    if (!isLive) {
+      const msg = escHtml(
+        data.data_source_message ||
+        'Live patent search unavailable. Configure PATENTSVIEW_API_KEY to enable live patent results.'
+      );
+      offlineNotice.innerHTML =
+        `<strong>Live patent search is not available.</strong><br>${msg}`;
+      offlineNotice.style.display = 'block';
+      summaryBox.style.display = 'none';
+      conceptsLabel.style.display = 'none';
+      patentsLabel.style.display = 'none';
+      legalDisclaimer.style.display = 'none';
+
+      // Still show extracted concepts even in offline mode (helpful for users)
+      conceptsWrap.innerHTML = '';
+      (data.extracted_concepts || []).forEach(c => {
+        const pill = document.createElement('span');
+        pill.className = 'pill';
+        pill.textContent = c;
+        conceptsWrap.appendChild(pill);
+      });
+      if ((data.extracted_concepts || []).length > 0) {
+        conceptsLabel.style.display = 'block';
+      }
+
+      results.style.display = 'block';
+      return;
+    }
+
+    // ── Live results ───────────────────────────────────────────
+    offlineNotice.style.display = 'none';
+
     // Summary
     summaryBox.textContent = data.summary;
+    summaryBox.style.display = hasMatch ? 'block' : 'none';
 
     // Concepts
     conceptsWrap.innerHTML = '';
@@ -471,6 +709,7 @@
       pill.textContent = c;
       conceptsWrap.appendChild(pill);
     });
+    conceptsLabel.style.display = (data.extracted_concepts || []).length > 0 ? 'block' : 'none';
 
     // Patents
     patentsGrid.innerHTML = '';
@@ -508,6 +747,8 @@
       patentsGrid.appendChild(card);
     });
 
+    patentsLabel.style.display = hasMatch ? 'block' : 'none';
+    legalDisclaimer.style.display = 'block';
     results.style.display = 'block';
   }
 

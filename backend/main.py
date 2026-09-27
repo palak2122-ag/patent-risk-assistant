@@ -8,10 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from backend.services.extractor import extract_concepts
-from backend.services.similarity import find_similar_patents
+from backend.services.similarity import find_similar_patents, LOCAL_DEMO_PATENTS
+from backend.services.patent_retriever import retrieve_patents
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -20,7 +21,7 @@ from backend.services.similarity import find_similar_patents
 app = FastAPI(
     title="Patent Risk & Similarity Assistant",
     description="Analyzes code or project descriptions and identifies potentially similar existing patents.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 # Allow requests from any origin (required for local dev / hackathon)
@@ -32,11 +33,7 @@ app.add_middleware(
 )
 
 # ── Static frontend ──────────────────────────────────────────────────────────
-# Resolve the frontend/ directory relative to this file so the app works
-# regardless of where uvicorn is launched from.
 _FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
-
-# Mount static assets (CSS, JS, images if any are added later)
 app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
 
 # ---------------------------------------------------------------------------
@@ -63,33 +60,42 @@ class AnalyzeResponse(BaseModel):
     extracted_concepts: List[str]    # Key technical concepts found in the input
     matches: List[PatentMatch]       # Ranked list of similar patents
     summary: str                     # Plain-English risk summary
+    data_source: str                 # "live" or "offline"
+    data_source_message: Optional[str] = None  # set when offline or on error
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _build_summary(matches: List[PatentMatch]) -> str:
+def _build_summary(matches: List[PatentMatch], data_source: str) -> str:
     """
-    Generate a plain-English one-paragraph risk summary based on the
-    top match and the overall spread of risk levels found.
+    Generate a plain-English one-paragraph risk summary.
+    Includes a disclaimer that labels are vocabulary-overlap indicators,
+    not legal infringement conclusions.
     """
+    disclaimer = (
+        "DISCLAIMER: These similarity labels reflect vocabulary overlap only "
+        "and are NOT legal infringement conclusions. Always consult a qualified "
+        "patent attorney before making legal or commercial decisions."
+    )
+
     if not matches:
-        return "No similar patents were found in the dataset."
+        return f"No similar patents were found. {disclaimer}"
 
     top = matches[0]
     high_count   = sum(1 for m in matches if m.risk_level == "High")
     medium_count = sum(1 for m in matches if m.risk_level == "Medium")
     low_count    = sum(1 for m in matches if m.risk_level == "Low")
 
-    # Describe the top match
+    source_label = "live patent search" if data_source == "live" else "offline demo dataset"
+
     summary = (
-        f"The closest match is \"{top.title}\" ({top.patent_id}) "
+        f"The closest match in the {source_label} is \"{top.title}\" ({top.patent_id}) "
         f"with a similarity score of {top.similarity_score:.2f} — "
         f"risk level: {top.risk_level}. "
     )
 
-    # Describe the overall risk spread
     parts = []
     if high_count:
         parts.append(f"{high_count} High-risk")
@@ -100,14 +106,14 @@ def _build_summary(matches: List[PatentMatch]) -> str:
 
     summary += f"Across all results: {', '.join(parts)} overlap(s) found. "
 
-    # Add actionable advice based on the top risk level
     if top.risk_level == "High":
-        summary += "Consider reviewing the claims of the high-risk patent(s) with a legal advisor before proceeding."
+        summary += "Consider reviewing the claims of the high-risk patent(s) with a legal advisor before proceeding. "
     elif top.risk_level == "Medium":
-        summary += "Some terminology overlaps exist; review the abstracts and consider differentiating your approach."
+        summary += "Some terminology overlaps exist; review the abstracts and consider differentiating your approach. "
     else:
-        summary += "Low overlap detected — your project appears to use sufficiently distinct technology."
+        summary += "Low overlap detected — your project appears to use sufficiently distinct technology. "
 
+    summary += disclaimer
     return summary
 
 
@@ -124,7 +130,7 @@ def root():
 
 @app.get("/health")
 def health():
-    """JSON health-check — useful for testing the API is alive."""
+    """JSON health-check."""
     return {"status": "ok", "message": "Patent Risk & Similarity Assistant is running."}
 
 
@@ -132,31 +138,69 @@ def health():
 def analyze(request: AnalyzeRequest):
     """
     Accepts a code snippet, README, or description and returns:
-    - extracted_concepts : key technical terms found in the input
-    - matches            : top similar patents ranked by TF-IDF cosine similarity
-    - summary            : plain-English risk assessment
+    - extracted_concepts     : key technical terms found in the input
+    - matches                : top similar patents ranked by TF-IDF cosine similarity
+    - summary                : plain-English risk assessment with disclaimer
+    - data_source            : "live" (PatentsView API) or "offline" (demo dataset)
+    - data_source_message    : set when offline or when an error occurred
     """
-    # Basic validation — reject empty or whitespace-only input
     if not request.input or not request.input.strip():
         raise HTTPException(
             status_code=400,
             detail="Input must not be empty. Please provide code or a project description.",
         )
 
-    # Step 1: extract meaningful technical concepts from the user's text
+    # Step 1: extract meaningful technical concepts for the UI pills
     concepts = extract_concepts(request.input)
 
-    # Step 2: find the most similar patents using TF-IDF cosine similarity
-    raw_matches = find_similar_patents(concepts, top_n=5)
+    # Step 2: attempt live patent retrieval from PatentsView API.
+    # The retriever reads PATENTSVIEW_API_KEY from the environment — the key
+    # is NEVER returned to the frontend.
+    retrieval = retrieve_patents(request.input)
 
-    # Step 3: convert raw dicts into validated Pydantic models
+    # Step 3: choose the patent pool and record the data source
+    if retrieval.source == "live" and retrieval.patents:
+        patent_pool = retrieval.patents
+        data_source = "live"
+        data_source_message = None
+    else:
+        # Do NOT silently serve local patents as if they were live results.
+        # Return the error and empty matches so the frontend shows the
+        # "unavailable" state clearly.
+        return AnalyzeResponse(
+            extracted_concepts=concepts,
+            matches=[],
+            summary=(
+                retrieval.error or
+                "Live patent search unavailable. "
+                "Configure PATENTSVIEW_API_KEY to enable live patent results."
+            ),
+            data_source="offline",
+            data_source_message=(
+                retrieval.error or
+                "Live patent search unavailable. "
+                "Configure PATENTSVIEW_API_KEY to enable live patent results."
+            ),
+        )
+
+    # Step 4: score the live patents against the user's description
+    raw_matches = find_similar_patents(
+        concepts,
+        top_n=5,
+        raw_text=request.input,
+        patents=patent_pool,
+    )
+
+    # Step 5: convert to Pydantic models
     matches = [PatentMatch(**m) for m in raw_matches]
 
-    # Step 4: build a human-readable summary
-    summary = _build_summary(matches)
+    # Step 6: build a human-readable summary (includes disclaimer)
+    summary = _build_summary(matches, data_source)
 
     return AnalyzeResponse(
         extracted_concepts=concepts,
         matches=matches,
         summary=summary,
+        data_source=data_source,
+        data_source_message=data_source_message,
     )
